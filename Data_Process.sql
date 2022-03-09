@@ -102,3 +102,124 @@ from online_order oo
 join item i on oo.itemid = i.id 
 group by 1
 order by 2 desc
+
+
+-- 날짜 관련 함수
+-- 1) 오늘을 나타내는 함수
+select now()
+
+select current_date 
+
+select current_timestamp 
+
+-- 2) 날짜 형식에서 문자 형식으로 변환
+select to_char(now(), 'yyyymmdd')
+
+-- 3) 날짜 더하기 빼기
+-- day, week, month, year 로 조절 가능
+select now() + interval '1 month'
+select now() - interval '1 month'
+
+-- 4) 특정 날짜로부터 연도, 월, 주 확인
+-- day, week, month, year 로 조절 가능
+select date_part('month', now()) 
+
+-- 5) 특정 날짜로부터 1년 동안의 매출액 확인
+select * from gmv_trend gt 
+where cast(yyyy as varchar) || cast(mm as varchar)
+>= cast(date_part('year', now() - interval '1 year') as varchar) || cast(date_part('month', now() - interval '1 year' ) as varchar)
+order by 2, 3
+
+select * from gmv_trend gt 
+
+select category, yyyy, sum(gmv) as gmv from gmv_trend gt 
+where cast(yyyy as varchar) || cast(mm as varchar)
+>= cast(date_part('year', now() - interval '1 year') as varchar) || cast(date_part('month', now() - interval '1 year' ) as varchar)
+group by 1, 2
+order by 3 desc
+
+
+-- 할인률, 판매가, 이익률 계산
+-- 모두에 대한 할인률 이므로 '*' 모두 선택, 할인률 값 as discount_rate로 만듬
+select *, cast(discount as numeric) / gmv as discount_rate
+from online_order oo 
+
+select *, gmv - discount as paid_amount
+from online_order oo 
+
+select *, cast(product_profit as numeric) / gmv as product_margin 
+from online_order oo 
+
+select *, cast(total_profit  as numeric) / gmv as total_margin 
+from online_order oo 
+
+select *,
+cast(discount as numeric) / gmv as discount_rate,
+gmv - discount as paid_amount,
+cast(product_profit as numeric) / gmv as product_margin,
+cast(total_profit  as numeric) / gmv as total_margin
+from online_order oo 
+
+-- 상품 테이블과 조인하여 확인
+-- 결국 select에 오는것은 맨 앞에 어떤 목록이 올것이냐임
+select c.cate1,
+round(sum(cast(discount as numeric)) / sum(gmv), 2) * 100 as discount_rate,
+round(sum(gmv - discount), 2) * 100 as paid_amount,
+round(sum(cast(product_profit as numeric)) / sum(gmv), 2) * 100 as product_margin,
+round(sum(cast(total_profit  as numeric)) / sum(gmv) * 100) || '%' as total_margin
+from online_order oo
+join item i on oo.itemid = i.id 
+join category c on i.category_id = c.id 
+group by 1
+order by 3 desc
+
+
+
+-- 인당 구매 수량, 구매 금액 계산
+-- 인당 평균 구매 수량 = 총 판매 수량 / 총 고객 수
+-- 인당 평균 구매 금액 = 총 구매 금액 / 총 고객 수
+
+-- unitsold - 판매 수량
+-- userid 를 세는데 중복을 없애기 위해서 'distinct'로 처리
+select i.item_name,
+sum(unitsold) as unitsold,
+count(distinct userid) as user_count,
+round(sum(cast(unitsold as numeric)) /  count(distinct userid), 2) as avg_unitsold_per_customer
+from online_order oo 
+join item i on oo.itemid = i.id 
+group by 1
+order by 4 desc
+
+
+select i.item_name,
+sum(unitsold) as unitsold,
+count(distinct userid) as user_count,
+round(sum(cast(unitsold as numeric)) /  count(distinct userid), 2) as avg_unitsold_per_customer,
+round(sum(cast(gmv as numeric)) /  count(distinct userid)) as avg_gmv_per_customer
+from online_order oo 
+join item i on oo.itemid = i.id 
+group by 1
+order by 4 desc
+
+
+-- 인당 구매금액이 높은 성, 연령대는?
+select ui.gender, ui.age_band, 
+sum(gmv)  as gmv,
+count(distinct oo.userid) as user_count,
+sum(gmv) / count(distinct oo.userid)  as avg_gmv_per_customer 
+from online_order oo 
+join user_info ui on oo.userid = ui.userid 
+group by 1,2
+order by 5 desc
+
+
+
+
+
+
+
+
+
+
+
+
